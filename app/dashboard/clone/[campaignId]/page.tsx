@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { LevelToggle } from "@/components/level-toggle";
 import { ProgressSteps } from "@/components/progress-steps";
 import { CloneSummary } from "@/components/clone-summary";
@@ -43,6 +47,47 @@ export default function ClonePage() {
   const [adGroups, setAdGroups] = useState<GadsAdGroup[]>([]);
   const [adsByAdGroup, setAdsByAdGroup] = useState<Record<string, GadsAd[]>>({});
   const [error, setError] = useState<string | null>(null);
+
+  const [hasOaiToken, setHasOaiToken] = useState(true);
+  const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
+  const [tokenInput, setTokenInput] = useState("");
+  const [tokenSaving, setTokenSaving] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/oai/token")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.hasToken) {
+          setHasOaiToken(false);
+          setTokenDialogOpen(true);
+        }
+      })
+      .catch(() => {
+        // silently ignore — token check is best-effort on mount
+      });
+  }, []);
+
+  const handleTokenSubmit = useCallback(async () => {
+    if (!tokenInput.trim()) return;
+    setTokenSaving(true);
+    setTokenError(null);
+    try {
+      const res = await fetch("/api/oai/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: tokenInput.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to save token");
+      setHasOaiToken(true);
+      setTokenDialogOpen(false);
+      setTokenInput("");
+    } catch (err) {
+      setTokenError(err instanceof Error ? err.message : "Failed to save token");
+    } finally {
+      setTokenSaving(false);
+    }
+  }, [tokenInput]);
 
   const [readingSteps, setReadingSteps] = useState<
     { label: string; status: "pending" | "active" | "complete" }[]
@@ -161,6 +206,39 @@ export default function ClonePage() {
   if (step === "preflight") {
     return (
       <div className="space-y-6 max-w-2xl mx-auto">
+        <Dialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>OpenAI API Token Required</DialogTitle>
+              <DialogDescription>
+                Enter your OpenAI API token to enable campaign mapping. Your token is stored
+                for this session only.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              <Label htmlFor="oai-token">API Token</Label>
+              <Input
+                id="oai-token"
+                type="password"
+                placeholder="sk-..."
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleTokenSubmit();
+                }}
+              />
+              {tokenError && (
+                <p className="text-sm text-destructive">{tokenError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={handleTokenSubmit} disabled={tokenSaving || !tokenInput.trim()}>
+                {tokenSaving ? "Saving..." : "Save Token"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/dashboard/campaigns">
@@ -211,13 +289,19 @@ export default function ClonePage() {
         )}
 
         <div className="flex items-center gap-3">
-          <Button onClick={() => handleAutoMap()}>Auto Map</Button>
+          <Button onClick={() => handleAutoMap()} disabled={!hasOaiToken}>Auto Map</Button>
           <Button
             variant="ghost"
             onClick={() => handleAutoMap("manual-review")}
+            disabled={!hasOaiToken}
           >
             Manual Review
           </Button>
+          {!hasOaiToken && (
+            <Button variant="outline" onClick={() => setTokenDialogOpen(true)}>
+              Set API Token
+            </Button>
+          )}
         </div>
       </div>
     );
