@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -46,6 +46,12 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-status-enabled: oklch(0.723 0.219 149.579);
+  --color-status-paused: oklch(0.795 0.184 86.047);
+  --color-status-draft: oklch(0.708 0 0);
+  --color-status-removed: oklch(0.637 0.237 15.163);
+  --color-mapped: oklch(0.723 0.219 149.579);
+  --color-action-needed: oklch(0.795 0.184 86.047);
 }
 
 :root {
