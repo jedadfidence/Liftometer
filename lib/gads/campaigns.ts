@@ -65,9 +65,9 @@ const NEGATIVE_GEO_MAP: Record<number, string> = {
 /*  Transform a raw GAds API row into our GadsCampaign type           */
 /* ------------------------------------------------------------------ */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function transformCampaign(
-  raw: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  raw: Record<string, any>,
   accountId: string,
   accountName: string,
 ): GadsCampaign {
