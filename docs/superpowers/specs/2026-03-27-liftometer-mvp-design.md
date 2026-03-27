@@ -457,7 +457,139 @@ interface OAICreative {
 
 ---
 
-## 10. Known Limitations (MVP)
+## 10. Design System & Component Architecture
+
+Everything is built from a consistent set of primitives. No ad-hoc styles, no random values. All UI is composed from the tokens and components below.
+
+### Theme Tokens
+
+Base: **zinc** palette, **oklch** color space, configured via CSS variables in `globals.css`.
+
+```css
+@theme inline {
+  /* Semantic tokens — all UI references these, never raw hex */
+  --color-background: ...;       /* Page background */
+  --color-foreground: ...;       /* Primary text */
+  --color-card: ...;             /* Card / panel surfaces */
+  --color-card-foreground: ...;  /* Text on cards */
+  --color-primary: ...;          /* Primary actions (blue accent) */
+  --color-primary-foreground: ...;
+  --color-secondary: ...;        /* Secondary actions */
+  --color-secondary-foreground: ...;
+  --color-muted: ...;            /* Subdued backgrounds */
+  --color-muted-foreground: ...; /* Subdued text */
+  --color-accent: ...;           /* Hover / focus highlights */
+  --color-destructive: ...;      /* Delete / error actions */
+  --color-border: ...;           /* All borders */
+  --color-input: ...;            /* Input borders */
+  --color-ring: ...;             /* Focus rings */
+
+  /* App-specific semantic tokens */
+  --color-status-enabled: oklch(0.723 0.219 149.579);   /* Green — campaign enabled */
+  --color-status-paused: oklch(0.795 0.184 86.047);     /* Yellow — campaign paused */
+  --color-status-draft: oklch(0.708 0 0);               /* Gray — draft */
+  --color-status-removed: oklch(0.637 0.237 15.163);    /* Red — removed */
+  --color-mapped: oklch(0.723 0.219 149.579);           /* Green — auto-mapped field */
+  --color-action-needed: oklch(0.795 0.184 86.047);     /* Orange — needs user input */
+
+  /* Consistent radius */
+  --radius: 0.625rem;
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 0.875);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  /* Fonts — literal names for Tailwind v4 compatibility */
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+}
+```
+
+### Typography Scale
+
+| Usage | Class | Font |
+|-------|-------|------|
+| Page title | `text-2xl font-semibold` | Geist Sans |
+| Section header | `text-lg font-medium` | Geist Sans |
+| Card title | `text-base font-medium` | Geist Sans |
+| Body text | `text-sm` | Geist Sans |
+| Helper / muted | `text-sm text-muted-foreground` | Geist Sans |
+| Campaign IDs, metrics, budgets | `text-sm font-mono` | Geist Mono |
+| Timestamps | `text-xs font-mono text-muted-foreground` | Geist Mono |
+
+### Spacing & Density
+
+Comfortable density throughout (dashboard use case):
+
+| Context | Spacing |
+|---------|---------|
+| Page padding | `p-6` (desktop), `p-4` (mobile) |
+| Card padding | `p-6` |
+| Gap between cards | `gap-6` |
+| Gap between form fields | `gap-4` |
+| Table cell padding | `px-4 py-3` |
+| Inline element gap | `gap-2` |
+
+### Component Primitives (shadcn/ui)
+
+All these are installed via `npx shadcn@latest add` and customized in `components/ui/`:
+
+| Component | Used for |
+|-----------|----------|
+| `Button` | All clickable actions — with variants: `default`, `secondary`, `outline`, `ghost`, `destructive` |
+| `Card` | Every content panel (dashboard accounts, campaign detail sections, clone summary) |
+| `Badge` | Status indicators (Enabled/Paused/Draft/Removed), "Mapped"/"Action needed" tags |
+| `Table` | Campaign list |
+| `Input` | Search bar, editable clone fields, OAI token input |
+| `Select` | Filter dropdowns (status, campaign type, bidding strategy, etc.) |
+| `Tabs` | Manual review tabbed interface (Campaign / Ad Sets / Creatives) |
+| `Dialog` | OAI token prompt |
+| `AlertDialog` | Destructive confirmations (disconnect account) |
+| `Sheet` | Mobile filter panel |
+| `Separator` | Section dividers in campaign detail |
+| `Skeleton` | Loading states for campaign list, detail, clone |
+| `Tooltip` | Hover hints on mapping fields, filter labels |
+| `DropdownMenu` | Row actions in campaign table |
+| `Switch` | Level toggles (Ad Group / Creative) in clone settings |
+| `ScrollArea` | Scrollable campaign detail sections |
+| `Popover` | Budget range filter |
+
+### Custom App Components (built from primitives above)
+
+| Component | Composed from | Purpose |
+|-----------|---------------|---------|
+| `StatusBadge` | `Badge` + status color tokens | Renders campaign/ad group status with correct color |
+| `MappingField` | `Card` + `Input` + `Badge` | Single field row: GAds value → OAI value (editable), with Mapped/Action needed badge |
+| `MappingSection` | `Card` + `MappingField[]` + collapse | Collapsible section of mapped fields (green = collapsed, orange = expanded) |
+| `CloneSummary` | `MappingSection[]` + stats banner | Full auto-map results page |
+| `CampaignTable` | `Table` + `Input` + `Select` + `Badge` | DataTable with search, filters, sorting, row actions |
+| `AccountCard` | `Card` + `Badge` + `Button` | Connected GAds account display with disconnect option |
+| `FilterBar` | `Select[]` + `Badge` chips + clear button | Row of filter dropdowns with active filter chips |
+| `LevelToggle` | `Switch` + label + description | Toggle for Ad Group / Creative levels in clone settings |
+| `ProgressSteps` | Custom | Step indicator for clone flow (Reading → Mapping → Creating → Done) |
+| `StatsBar` | `Card` + numbers | "12 fields mapped, 4 need input" summary bar |
+| `ThemeToggle` | `Button` + `DropdownMenu` + `next-themes` | Dark/light/system mode switcher |
+| `NavBar` | `header` + logo + `ThemeToggle` + user menu | Top navigation bar for authenticated layout |
+
+### Icon Usage
+
+Lucide icons throughout, consistent sizing:
+- Navigation / buttons: `h-4 w-4`
+- Empty states / hero: `h-8 w-8` or `h-12 w-12`
+- Always `text-muted-foreground` unless inside a colored context
+
+### State Patterns
+
+Every data-loading component handles three states:
+
+1. **Loading**: `Skeleton` placeholders matching the content layout
+2. **Empty**: `Card` with icon + message + action button (e.g., "No campaigns found. Connect a Google Ads account.")
+3. **Error**: `Card` with destructive styling + error message + retry button
+
+---
+
+## 11. Known Limitations (MVP)
 
 1. **In-memory token store** — tokens lost on server restart. Acceptable for MVP.
 2. **No refresh token rotation** — if GAds token expires, user must reconnect.
@@ -468,7 +600,7 @@ interface OAICreative {
 
 ---
 
-## 11. Future Considerations (Post-MVP)
+## 12. Future Considerations (Post-MVP)
 
 - Real OAI API integration when available
 - Database (Neon Postgres via Vercel Marketplace) for persistent storage
