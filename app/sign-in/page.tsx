@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,13 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Link from "next/link";
 
-export default async function Home() {
-  const session = await auth();
-  if (session?.user) {
-    redirect("/dashboard");
-  }
+export default function SignInPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-md">
@@ -24,10 +18,17 @@ export default async function Home() {
             Clone your Google Ads campaigns to OpenAI
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex justify-center">
-          <Button asChild size="lg">
-            <Link href="/sign-in">Get Started</Link>
-          </Button>
+        <CardContent>
+          <form
+            action={async () => {
+              "use server";
+              await signIn("google", { redirectTo: "/dashboard" });
+            }}
+          >
+            <Button type="submit" className="w-full" size="lg">
+              Sign in with Google
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
