@@ -174,7 +174,9 @@ export default function ClonePage() {
 
       setStep(targetStep);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error("Failed to read campaign data");
       setStep("preflight");
     }
   }, [campaignId, includeAdGroups, includeCreatives]);
@@ -195,7 +197,9 @@ export default function ClonePage() {
       setCloneResult(result);
       setStep("success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create draft");
+      const message = err instanceof Error ? err.message : "Failed to create draft";
+      setError(message);
+      toast.error("Failed to create OAI draft");
       setStep("summary");
     }
   }, [draft]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { AlertCircle, Megaphone } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CampaignTable } from "@/components/campaign-table";
@@ -27,7 +28,9 @@ export default function CampaignsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unknown error");
+          const message = err instanceof Error ? err.message : "Unknown error";
+          setError(message);
+          toast.error("Failed to load campaigns");
         }
       } finally {
         if (!cancelled) {

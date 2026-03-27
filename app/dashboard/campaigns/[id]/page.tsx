@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import Link from "next/link";
 import { ArrowLeft, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,11 @@ export default function CampaignDetailPage() {
         const data = await res.json();
         if (!cancelled) setCampaign(data.campaign);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Unknown error");
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : "Unknown error";
+          setError(message);
+          toast.error("Failed to load campaign");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
