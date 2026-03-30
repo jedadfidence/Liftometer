@@ -11,6 +11,11 @@ import {
 import Link from "next/link";
 
 export default async function Home() {
+  // Skip auth check when SKIP_AUTH is enabled
+  if (process.env.SKIP_AUTH === "true") {
+    redirect("/dashboard");
+  }
+
   const session = await auth();
   if (session?.user) {
     redirect("/dashboard");

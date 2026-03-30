@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/get-user-id";
 import { getGadsAccounts } from "@/lib/tokens";
 import { fetchAds } from "@/lib/gads/ads";
 
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId();
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const accounts = getGadsAccounts(session.user.id);
+  const accounts = getGadsAccounts(userId);
   const ads = await fetchAds(adGroupId, accounts);
 
   return Response.json({ ads });

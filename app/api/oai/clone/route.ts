@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/get-user-id";
 import { createOAIDraft } from "@/lib/oai/stub";
 import type { OAICampaignDraft } from "@/lib/types";
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId();
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   const draft: OAICampaignDraft = await request.json();

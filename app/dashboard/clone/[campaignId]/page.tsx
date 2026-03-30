@@ -60,7 +60,7 @@ export default function ClonePage() {
       .then((data) => {
         if (!data.hasToken) {
           setHasOaiToken(false);
-          setTokenDialogOpen(true);
+          // Don't auto-open dialog — let user proceed without token for MVP
         }
       })
       .catch(() => {
@@ -293,20 +293,23 @@ export default function ClonePage() {
         )}
 
         <div className="flex items-center gap-3">
-          <Button onClick={() => handleAutoMap()} disabled={!hasOaiToken}>Auto Map</Button>
+          <Button onClick={() => handleAutoMap()}>Auto Map</Button>
           <Button
             variant="ghost"
             onClick={() => handleAutoMap("manual-review")}
-            disabled={!hasOaiToken}
           >
             Manual Review
           </Button>
-          {!hasOaiToken && (
-            <Button variant="outline" onClick={() => setTokenDialogOpen(true)}>
-              Set API Token
-            </Button>
-          )}
         </div>
+        {!hasOaiToken && (
+          <p className="text-sm text-muted-foreground">
+            OAI API token not set.{" "}
+            <button className="underline hover:text-foreground" onClick={() => setTokenDialogOpen(true)}>
+              Add token
+            </button>{" "}
+            (optional for demo — clone will work with mock API)
+          </p>
+        )}
       </div>
     );
   }

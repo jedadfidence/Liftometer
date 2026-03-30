@@ -1,9 +1,9 @@
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/get-user-id";
 import { redirect } from "next/navigation";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId();
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -14,7 +14,7 @@ export async function GET() {
     scope: "https://www.googleapis.com/auth/adwords",
     access_type: "offline",
     prompt: "consent",
-    state: session.user.id,
+    state: userId,
   });
 
   redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);

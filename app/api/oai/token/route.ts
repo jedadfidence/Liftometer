@@ -1,21 +1,21 @@
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/get-user-id";
 import { setOaiToken, getOaiToken } from "@/lib/tokens";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId();
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const token = getOaiToken(session.user.id);
+  const token = getOaiToken(userId);
   return Response.json({ hasToken: !!token });
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId();
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { token } = await request.json();
-  setOaiToken(session.user.id, token);
+  setOaiToken(userId, token);
   return Response.json({ success: true });
 }

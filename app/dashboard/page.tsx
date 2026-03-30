@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/get-user-id";
 import { getGadsAccounts } from "@/lib/tokens";
 import { AccountCard } from "@/components/account-card";
 import { EmptyState } from "@/components/empty-state";
@@ -7,8 +7,8 @@ import { Plus, BarChart3 } from "lucide-react";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  const accounts = getGadsAccounts(session!.user!.id!);
+  const userId = await getUserId();
+  const accounts = getGadsAccounts(userId ?? "");
 
   return (
     <div className="space-y-6">
