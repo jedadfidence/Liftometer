@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from "vitest";
-import { addGadsAccount, getGadsAccounts, removeGadsAccount, getOaiToken, setOaiToken, clearUserTokens } from "@/lib/tokens";
+import { addGadsAccount, getGadsAccounts, removeGadsAccount, getOaiToken, setOaiToken, getOaiConnection, removeOaiConnection, clearUserTokens } from "@/lib/tokens";
 
 describe("token store", () => {
   beforeEach(() => { clearUserTokens("user-1"); });
@@ -31,6 +31,21 @@ describe("token store", () => {
   it("stores and retrieves OAI token", () => {
     setOaiToken("user-1", "oai-token-123");
     expect(getOaiToken("user-1")).toBe("oai-token-123");
+  });
+
+  it("stores OAI connection with name and masked ID", () => {
+    setOaiToken("user-1", "oai-abcdefgh1234", "My OAI Account");
+    const conn = getOaiConnection("user-1");
+    expect(conn).toBeDefined();
+    expect(conn!.name).toBe("My OAI Account");
+    expect(conn!.maskedId).toBe("oai-...1234");
+  });
+
+  it("removes OAI connection", () => {
+    setOaiToken("user-1", "oai-token-123");
+    removeOaiConnection("user-1");
+    expect(getOaiToken("user-1")).toBeUndefined();
+    expect(getOaiConnection("user-1")).toBeUndefined();
   });
 
   it("returns undefined OAI token for unknown user", () => {
