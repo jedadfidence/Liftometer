@@ -15,7 +15,7 @@ export default function SignInPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-semibold">Liftometer</CardTitle>
           <CardDescription>
-            Clone your Google Ads campaigns to OpenAI
+            Clone your Google Ads campaigns to OpenAI in one click
           </CardDescription>
         </CardHeader>
         <CardContent>
