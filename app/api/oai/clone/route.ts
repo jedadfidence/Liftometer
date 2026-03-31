@@ -1,5 +1,6 @@
 import { getUserId } from "@/lib/get-user-id";
 import { createOAIDraft } from "@/lib/oai/stub";
+import { addActivity } from "@/lib/tokens";
 import type { OAICampaignDraft } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -9,5 +10,6 @@ export async function POST(request: Request) {
   }
   const draft: OAICampaignDraft = await request.json();
   const result = await createOAIDraft(draft);
+  addActivity(userId, { campaignName: draft.name, action: "cloned" });
   return Response.json(result);
 }

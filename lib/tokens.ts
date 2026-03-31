@@ -6,16 +6,23 @@ interface OaiConnection {
   maskedId: string;
 }
 
+export interface ActivityEntry {
+  campaignName: string;
+  action: "cloned" | "connected" | "disconnected";
+  timestamp: string;
+}
+
 interface UserTokens {
   gadsAccounts: GadsAccount[];
   oai?: OaiConnection;
+  activity: ActivityEntry[];
 }
 
 const store = new Map<string, UserTokens>();
 
 function getOrCreate(userId: string): UserTokens {
   if (!store.has(userId)) {
-    store.set(userId, { gadsAccounts: [] });
+    store.set(userId, { gadsAccounts: [], activity: [] });
   }
   return store.get(userId)!;
 }
@@ -87,4 +94,21 @@ export function removeOaiConnection(userId: string): void {
 
 export function clearUserTokens(userId: string): void {
   store.delete(userId);
+}
+
+// --- Activity ---
+
+export function addActivity(userId: string, entry: Omit<ActivityEntry, "timestamp">): void {
+  const tokens = getOrCreate(userId);
+  tokens.activity.unshift({
+    ...entry,
+    timestamp: new Date().toISOString(),
+  });
+  if (tokens.activity.length > 20) {
+    tokens.activity = tokens.activity.slice(0, 20);
+  }
+}
+
+export function getActivity(userId: string): ActivityEntry[] {
+  return store.get(userId)?.activity ?? [];
 }
