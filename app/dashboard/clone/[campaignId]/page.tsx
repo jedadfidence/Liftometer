@@ -1,191 +1,66 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import Link from "next/link";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LevelToggle } from "@/components/level-toggle";
-import { ProgressSteps } from "@/components/progress-steps";
-import { CloneSummary } from "@/components/clone-summary";
-import { CloneManualReview } from "@/components/clone-manual-review";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CloneSplitPane } from "@/components/clone-split-pane";
+import { StatsBar } from "@/components/stats-bar";
 import { mapFullCampaign, countMappingResults } from "@/lib/oai/mapper";
-import type {
-  GadsCampaign,
-  GadsAdGroup,
-  GadsAd,
-  OAICampaignDraft,
-  OAICloneResponse,
-} from "@/lib/types";
-import { CheckCircle2, AlertTriangle, ArrowLeft } from "lucide-react";
+import type { GadsCampaign, GadsAdGroup, GadsAd, OAICampaignDraft } from "@/lib/types";
 
-type CloneStep =
-  | "preflight"
-  | "reading"
-  | "summary"
-  | "manual-review"
-  | "creating"
-  | "success";
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export default function ClonePage() {
+export default function CloneFallbackPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
+  const router = useRouter();
 
-  const [step, setStep] = useState<CloneStep>("preflight");
-  const [includeAdGroups, setIncludeAdGroups] = useState(true);
-  const [includeCreatives, setIncludeCreatives] = useState(true);
-  const [draft, setDraft] = useState<OAICampaignDraft | null>(null);
-  const [cloneResult, setCloneResult] = useState<OAICloneResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [campaign, setCampaign] = useState<GadsCampaign | null>(null);
   const [adGroups, setAdGroups] = useState<GadsAdGroup[]>([]);
   const [adsByAdGroup, setAdsByAdGroup] = useState<Record<string, GadsAd[]>>({});
-  const [error, setError] = useState<string | null>(null);
-
-  const [hasOaiToken, setHasOaiToken] = useState(true);
-  const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
-  const [tokenInput, setTokenInput] = useState("");
-  const [tokenSaving, setTokenSaving] = useState(false);
-  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<OAICampaignDraft | null>(null);
 
   useEffect(() => {
-    fetch("/api/oai/token")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.hasToken) {
-          setHasOaiToken(false);
-          // Don't auto-open dialog — let user proceed without token for MVP
-        }
-      })
-      .catch(() => {
-        // silently ignore — token check is best-effort on mount
-      });
-  }, []);
-
-  const handleTokenSubmit = useCallback(async () => {
-    if (!tokenInput.trim()) return;
-    setTokenSaving(true);
-    setTokenError(null);
-    try {
-      const res = await fetch("/api/oai/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: tokenInput.trim() }),
-      });
-      if (!res.ok) throw new Error("Failed to save token");
-      setHasOaiToken(true);
-      setTokenDialogOpen(false);
-      setTokenInput("");
-    } catch (err) {
-      setTokenError(err instanceof Error ? err.message : "Failed to save token");
-    } finally {
-      setTokenSaving(false);
-    }
-  }, [tokenInput]);
-
-  const [readingSteps, setReadingSteps] = useState<
-    { label: string; status: "pending" | "active" | "complete" }[]
-  >([]);
-
-  const handleAutoMap = useCallback(async (targetStep: "summary" | "manual-review" = "summary") => {
-    setError(null);
-    setStep("reading");
-
-    const steps: { label: string; status: "pending" | "active" | "complete" }[] = [
-      { label: "Fetching campaign", status: "active" },
-    ];
-    if (includeAdGroups) steps.push({ label: "Fetching ad groups", status: "pending" });
-    if (includeCreatives) steps.push({ label: "Fetching ads", status: "pending" });
-    steps.push({ label: "Mapping", status: "pending" });
-    setReadingSteps([...steps]);
-
-    try {
-      // Fetch campaign
-      const campaignRes = await fetch(`/api/gads/campaigns/${campaignId}`);
-      if (!campaignRes.ok) throw new Error("Failed to fetch campaign");
-      const { campaign: fetchedCampaign } = await campaignRes.json();
-      setCampaign(fetchedCampaign);
-
-      steps[0].status = "complete";
-      setReadingSteps([...steps]);
-      await delay(400);
-
-      // Fetch ad groups
-      let fetchedAdGroups: GadsAdGroup[] = [];
-      if (includeAdGroups) {
-        const agStepIdx = steps.findIndex((s) => s.label === "Fetching ad groups");
-        steps[agStepIdx].status = "active";
-        setReadingSteps([...steps]);
+    async function load() {
+      try {
+        const campRes = await fetch(`/api/gads/campaigns/${campaignId}`);
+        if (!campRes.ok) throw new Error("Failed to fetch campaign");
+        const { campaign: fetchedCampaign } = await campRes.json();
+        setCampaign(fetchedCampaign);
 
         const agRes = await fetch(`/api/gads/adgroups?campaignId=${campaignId}`);
         if (!agRes.ok) throw new Error("Failed to fetch ad groups");
         const { adGroups: fetchedAgs } = await agRes.json();
-        fetchedAdGroups = fetchedAgs;
-        setAdGroups(fetchedAdGroups);
+        setAdGroups(fetchedAgs);
 
-        steps[agStepIdx].status = "complete";
-        setReadingSteps([...steps]);
-        await delay(400);
-      }
-
-      // Fetch ads per ad group
-      const fetchedAdsByAdGroup: Record<string, GadsAd[]> = {};
-      if (includeCreatives && fetchedAdGroups.length > 0) {
-        const adsStepIdx = steps.findIndex((s) => s.label === "Fetching ads");
-        steps[adsStepIdx].status = "active";
-        setReadingSteps([...steps]);
-
-        for (const ag of fetchedAdGroups) {
+        const fetchedAds: Record<string, GadsAd[]> = {};
+        for (const ag of fetchedAgs) {
           const adsRes = await fetch(`/api/gads/ads?adGroupId=${ag.id}`);
-          if (!adsRes.ok) throw new Error(`Failed to fetch ads for ad group ${ag.id}`);
+          if (!adsRes.ok) throw new Error(`Failed to fetch ads for ${ag.id}`);
           const { ads } = await adsRes.json();
-          fetchedAdsByAdGroup[ag.id] = ads;
-          await delay(300);
+          fetchedAds[ag.id] = ads;
         }
-        setAdsByAdGroup(fetchedAdsByAdGroup);
+        setAdsByAdGroup(fetchedAds);
 
-        steps[adsStepIdx].status = "complete";
-        setReadingSteps([...steps]);
-        await delay(400);
+        const mapped = mapFullCampaign(fetchedCampaign, fetchedAgs, fetchedAds);
+        setDraft(mapped);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load");
+        toast.error("Failed to load campaign data");
+      } finally {
+        setLoading(false);
       }
-
-      // Map
-      const mapStepIdx = steps.findIndex((s) => s.label === "Mapping");
-      steps[mapStepIdx].status = "active";
-      setReadingSteps([...steps]);
-      await delay(500);
-
-      const mapped = mapFullCampaign(
-        fetchedCampaign,
-        includeAdGroups ? fetchedAdGroups : [],
-        includeCreatives ? fetchedAdsByAdGroup : {},
-      );
-      setDraft(mapped);
-
-      steps[mapStepIdx].status = "complete";
-      setReadingSteps([...steps]);
-      await delay(300);
-
-      setStep(targetStep);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "An error occurred";
-      setError(message);
-      toast.error("Failed to read campaign data");
-      setStep("preflight");
     }
-  }, [campaignId, includeAdGroups, includeCreatives]);
+    load();
+  }, [campaignId]);
 
   const handleCreateDraft = useCallback(async () => {
     if (!draft) return;
-    setError(null);
-    setStep("creating");
-
+    setSubmitting(true);
     try {
       const res = await fetch("/api/oai/clone", {
         method: "POST",
@@ -193,274 +68,83 @@ export default function ClonePage() {
         body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error("Failed to create draft");
-      const result: OAICloneResponse = await res.json();
-      setCloneResult(result);
-      setStep("success");
+      const result = await res.json();
+      toast.success(`Campaign "${result.campaign_name}" cloned successfully`);
+      router.push("/dashboard/campaigns");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create draft";
-      setError(message);
-      toast.error("Failed to create OAI draft");
-      setStep("summary");
+      toast.error(err instanceof Error ? err.message : "Clone failed");
+    } finally {
+      setSubmitting(false);
     }
-  }, [draft]);
+  }, [draft, router]);
 
-  const mappingCounts = draft ? countMappingResults(draft) : { mapped: 0, actionNeeded: 0 };
-
-  // Preflight
-  if (step === "preflight") {
+  if (loading) {
     return (
-      <div className="space-y-6 max-w-2xl mx-auto">
-        <Dialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>OpenAI API Token Required</DialogTitle>
-              <DialogDescription>
-                Enter your OpenAI API token to enable campaign mapping. Your token is stored
-                for this session only.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 py-2">
-              <Label htmlFor="oai-token">API Token</Label>
-              <Input
-                id="oai-token"
-                type="password"
-                placeholder="sk-..."
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleTokenSubmit();
-                }}
-              />
-              {tokenError && (
-                <p className="text-sm text-destructive">{tokenError}</p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button onClick={handleTokenSubmit} disabled={tokenSaving || !tokenInput.trim()}>
-                {tokenSaving ? "Saving..." : "Save Token"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard/campaigns">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-semibold">Clone Campaign</h1>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">Clone Campaign</h1>
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
         </div>
+      </div>
+    );
+  }
 
-        <Card>
-          <CardHeader>
-            <CardTitle>What to clone</CardTitle>
-            <CardDescription>
-              Choose which levels to include in the clone. Campaign level is always included.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <LevelToggle
-              label="Campaign"
-              description="Name, objective, budget, schedule"
-              checked={true}
-              onCheckedChange={() => {}}
-              disabled
-            />
-            <LevelToggle
-              label="Ad Groups → Ad Sets"
-              description="Bidding, targeting, attribution settings"
-              checked={includeAdGroups}
-              onCheckedChange={(checked) => {
-                setIncludeAdGroups(checked);
-                if (!checked) setIncludeCreatives(false);
-              }}
-            />
-            <LevelToggle
-              label="Ads → Creatives"
-              description="Headlines, descriptions, URLs, formats"
-              checked={includeCreatives}
-              onCheckedChange={setIncludeCreatives}
-              disabled={!includeAdGroups}
-            />
+  if (error || !campaign || !draft) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">Clone Campaign</h1>
+        <Card className="border-destructive">
+          <CardContent className="flex items-center gap-3 py-4">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <p className="text-sm text-destructive">{error ?? "Failed to load campaign"}</p>
           </CardContent>
         </Card>
-
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="py-3 text-sm text-destructive">{error}</CardContent>
-          </Card>
-        )}
-
-        <div className="flex items-center gap-3">
-          <Button onClick={() => handleAutoMap()}>Auto Map</Button>
-          <Button
-            variant="ghost"
-            onClick={() => handleAutoMap("manual-review")}
-          >
-            Manual Review
-          </Button>
-        </div>
-        {!hasOaiToken && (
-          <p className="text-sm text-muted-foreground">
-            OAI API token not set.{" "}
-            <button className="underline hover:text-foreground" onClick={() => setTokenDialogOpen(true)}>
-              Add token
-            </button>{" "}
-            (optional for demo — clone will work with mock API)
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  // Reading
-  if (step === "reading") {
-    return (
-      <div className="space-y-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-semibold">Cloning Campaign...</h1>
-        <Card>
-          <CardContent className="py-6">
-            <ProgressSteps steps={readingSteps} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Summary
-  if (step === "summary" && draft) {
-    return (
-      <div className="space-y-6 max-w-3xl mx-auto">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setStep("preflight")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-semibold">Clone Summary</h1>
-        </div>
-
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="py-3 text-sm text-destructive">{error}</CardContent>
-          </Card>
-        )}
-
-        <CloneSummary
-          draft={draft}
-          onDraftChange={setDraft}
-          mappingCounts={mappingCounts}
-          onCreateDraft={handleCreateDraft}
-          onEditDetails={() => setStep("manual-review")}
-        />
-      </div>
-    );
-  }
-
-  // Manual Review
-  if (step === "manual-review" && draft && campaign) {
-    return (
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setStep("summary")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-semibold">Manual Review</h1>
-        </div>
-
-        <CloneManualReview
-          draft={draft}
-          campaign={campaign}
-          adGroups={adGroups}
-          adsByAdGroup={adsByAdGroup}
-          onDraftChange={setDraft}
-        />
-
-        <div className="flex gap-3 pt-4">
-          <Button onClick={handleCreateDraft}>Create Draft</Button>
-          <Button variant="outline" onClick={() => setStep("summary")}>
-            Back to Summary
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Creating
-  if (step === "creating") {
-    return (
-      <div className="space-y-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-semibold">Creating Draft...</h1>
-        <Card>
-          <CardContent className="py-6">
-            <ProgressSteps
-              steps={[
-                { label: "Mapped", status: "complete" },
-                { label: "Creating", status: "active" },
-                { label: "Done", status: "pending" },
-              ]}
-            />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Success
-  if (step === "success" && cloneResult) {
-    return (
-      <div className="space-y-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-semibold">Clone Complete</h1>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-[var(--color-mapped)]" />
-              <CardTitle>Draft Created</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-2">
-              <span className="text-muted-foreground">Draft ID</span>
-              <span className="font-mono">{cloneResult.draft_id}</span>
-              <span className="text-muted-foreground">Campaign Name</span>
-              <span>{cloneResult.campaign_name}</span>
-              <span className="text-muted-foreground">Status</span>
-              <span>{cloneResult.status}</span>
-              <span className="text-muted-foreground">Ad Sets</span>
-              <span>{cloneResult.ad_sets_count}</span>
-              <span className="text-muted-foreground">Creatives</span>
-              <span>{cloneResult.creatives_count}</span>
-              <span className="text-muted-foreground">Created At</span>
-              <span>{new Date(cloneResult.created_at).toLocaleString()}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {cloneResult.warnings.length > 0 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-[var(--color-action-needed)]" />
-                <CardTitle>Warnings</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                {cloneResult.warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
-
-        <Button asChild>
-          <Link href="/dashboard/campaigns">Clone Another</Link>
+        <Button variant="outline" onClick={() => router.push("/dashboard/campaigns")}>
+          Back to Campaigns
         </Button>
       </div>
     );
   }
 
-  // Fallback
-  return null;
+  const { mapped, actionNeeded } = countMappingResults(draft);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Clone: {campaign.name}</h1>
+        <Button onClick={handleCreateDraft} disabled={submitting}>
+          {submitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            "Create Draft"
+          )}
+        </Button>
+      </div>
+
+      {actionNeeded > 0 && (
+        <Card className="border-[var(--color-action-needed)]">
+          <CardContent className="flex items-center gap-3 py-3">
+            <AlertCircle className="h-5 w-5 text-[var(--color-action-needed)]" />
+            <p className="text-sm">
+              <strong>{actionNeeded} fields</strong> need your input before creating the draft.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <StatsBar mapped={mapped} actionNeeded={actionNeeded} />
+
+      <CloneSplitPane
+        campaign={campaign}
+        adGroups={adGroups}
+        adsByAdGroup={adsByAdGroup}
+        draft={draft}
+        onDraftChange={setDraft}
+      />
+    </div>
+  );
 }
