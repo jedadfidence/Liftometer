@@ -183,7 +183,7 @@ export function CloneSplitPane({
   }
 
   return (
-    <div ref={containerRef} className="flex h-[calc(100vh-220px)]">
+    <div ref={containerRef} className="flex flex-1 min-h-0">
       {/* Left pane or collapsed tab */}
       {collapsed ? (
         <button
