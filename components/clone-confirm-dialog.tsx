@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, X, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -149,17 +149,21 @@ export function CloneConfirmDialog({
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={cloning}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={cloning} className="rounded-full">
+            <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
-          <Button onClick={handleClone} disabled={cloning}>
+          <Button onClick={handleClone} disabled={cloning} className="rounded-full">
             {cloning ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Cloning...
               </>
             ) : (
-              "Clone Now"
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Clone Now
+              </>
             )}
           </Button>
         </DialogFooter>
