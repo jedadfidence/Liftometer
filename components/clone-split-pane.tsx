@@ -223,7 +223,7 @@ export function CloneSplitPane({
           {/* Left pane content */}
           <ScrollArea className="flex-1">
             <div className="space-y-2 p-3">
-              <SourceSection title="Campaign" open={leftOpenStates[0]} onOpenChange={(v) => setLeftOpen(0, v)}>
+              <SourceSection title={campaign.name} level="campaign" open={leftOpenStates[0]} onOpenChange={(v) => setLeftOpen(0, v)}>
                 <SourceField label="Name" value={campaign.name} />
                 <SourceField label="Status" value={campaign.status} />
                 <SourceField label="Type" value={campaign.advertisingChannelType} />
@@ -234,7 +234,7 @@ export function CloneSplitPane({
               </SourceSection>
 
               {adGroups.map((ag, agIdx) => (
-                <SourceSection key={ag.id} title={`Ad Group: ${ag.name}`} open={leftOpenStates[agIdx + 1]} onOpenChange={(v) => setLeftOpen(agIdx + 1, v)}>
+                <SourceSection key={ag.id} title={ag.name} level="ad-group" open={leftOpenStates[agIdx + 1]} onOpenChange={(v) => setLeftOpen(agIdx + 1, v)}>
                   <SourceField label="Type" value={ag.type} />
                   <SourceField label="Status" value={ag.status} />
                   {ag.targetCpaMicros && (
