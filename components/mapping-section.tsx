@@ -41,7 +41,7 @@ export function MappingSection({ title, level, status, defaultOpen, children }: 
             {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
             <Badge
               variant="outline"
-              className={`${levelConfig.className} text-[10px] font-semibold tracking-wider uppercase rounded-full px-2 py-0`}
+              className={`${levelConfig.className} text-[10px] font-semibold tracking-[0.5px] uppercase rounded-full px-2 py-0`}
             >
               {levelConfig.label}
             </Badge>
