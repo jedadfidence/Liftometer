@@ -3,12 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CloneSplitPane } from "@/components/clone-split-pane";
-import { StatsBar } from "@/components/stats-bar";
 import { mapFullCampaign, countMappingResults } from "@/lib/oai/mapper";
 import type { GadsCampaign, GadsAdGroup, GadsAd, OAICampaignDraft } from "@/lib/types";
 
@@ -65,12 +64,14 @@ export default function CloneFallbackPage() {
       const res = await fetch("/api/oai/clone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({ ...draft, source_campaign_id: campaignId }),
       });
       if (!res.ok) throw new Error("Failed to create draft");
       const result = await res.json();
       toast.success(`Campaign "${result.campaign_name}" cloned successfully`);
-      router.push("/dashboard/campaigns");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Clone failed");
     } finally {
@@ -110,9 +111,23 @@ export default function CloneFallbackPage() {
   const { mapped, actionNeeded } = countMappingResults(draft);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Clone: {campaign.name}</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-semibold">Clone: {campaign.name}</h1>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-[var(--color-mapped)]" />
+              {mapped} mapped
+            </span>
+            {actionNeeded > 0 && (
+              <span className="flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4 text-[var(--color-action-needed)]" />
+                {actionNeeded} need input
+              </span>
+            )}
+          </div>
+        </div>
         <Button onClick={handleCreateDraft} disabled={submitting}>
           {submitting ? (
             <>
@@ -124,19 +139,6 @@ export default function CloneFallbackPage() {
           )}
         </Button>
       </div>
-
-      {actionNeeded > 0 && (
-        <Card className="border-[var(--color-action-needed)]">
-          <CardContent className="flex items-center gap-3 py-3">
-            <AlertCircle className="h-5 w-5 text-[var(--color-action-needed)]" />
-            <p className="text-sm">
-              <strong>{actionNeeded} fields</strong> need your input before creating the draft.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      <StatsBar mapped={mapped} actionNeeded={actionNeeded} />
 
       <CloneSplitPane
         campaign={campaign}
