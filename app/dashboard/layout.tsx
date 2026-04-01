@@ -5,9 +5,9 @@ import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background">
+      <div className="h-screen overflow-hidden bg-background">
         <AppSidebar />
-        <main className="ml-14 flex flex-col h-screen overflow-hidden">
+        <main className="ml-14 h-full flex flex-col overflow-hidden">
           <div className="px-6 pt-6 pb-2 shrink-0">
             <BreadcrumbNav />
           </div>
