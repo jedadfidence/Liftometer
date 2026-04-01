@@ -52,6 +52,19 @@
   --color-status-removed: oklch(0.637 0.237 15.163);
   --color-mapped: oklch(0.723 0.219 149.579);
   --color-action-needed: oklch(0.795 0.184 86.047);
+  --color-level-campaign: oklch(0.623 0.214 259.815);
+  --color-level-campaign-bg: oklch(0.623 0.214 259.815 / 12%);
+  --color-level-campaign-border: oklch(0.623 0.214 259.815 / 25%);
+  --color-level-ad-set: oklch(0.627 0.265 303.9);
+  --color-level-ad-set-bg: oklch(0.627 0.265 303.9 / 12%);
+  --color-level-ad-set-border: oklch(0.627 0.265 303.9 / 25%);
+  --color-level-creative: oklch(0.6 0.169 192.876);
+  --color-level-creative-bg: oklch(0.6 0.169 192.876 / 12%);
+  --color-level-creative-border: oklch(0.6 0.169 192.876 / 25%);
+  --color-status-mapped-bg: oklch(0.723 0.219 149.579 / 12%);
+  --color-status-mapped-border: oklch(0.723 0.219 149.579 / 25%);
+  --color-status-action-bg: oklch(0.795 0.184 86.047 / 12%);
+  --color-status-action-border: oklch(0.795 0.184 86.047 / 25%);
 }
 
 :root {
