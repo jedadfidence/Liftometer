@@ -7,7 +7,7 @@ import { MappingSection } from "@/components/mapping-section";
 import { SourceSection } from "@/components/source-section";
 import { formatBudget, microsToUsd } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, ChevronRight, PanelLeftClose } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, PanelLeftClose } from "lucide-react";
 import type { GadsCampaign, GadsAdGroup, GadsAd, OAICampaignDraft } from "@/lib/types";
 
 const OBJECTIVE_OPTIONS = [
@@ -286,7 +286,8 @@ export function CloneSplitPane({
                   : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
               }`}
             >
-              Needs input only
+              <AlertCircle className="h-3 w-3" />
+              Show needs input only
             </button>
             <button
               type="button"
