@@ -228,11 +228,13 @@ export function CloneSplitPane({
 
       {/* Right pane */}
       <div className="flex flex-col flex-1 min-w-0">
-        <div className="flex items-center px-4 py-2.5 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
             <span className="text-sm font-semibold">OpenAI Ad Settings</span>
           </div>
+          {/* Spacer to match left header height (which has the Hide button) */}
+          <div className="h-7" />
         </div>
         <ScrollArea className="flex-1">
         <div className="space-y-3 p-3">
