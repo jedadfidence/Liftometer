@@ -245,16 +245,18 @@ export function CloneSplitPane({
               adSet.targeting.locations.length === 0 ||
               adSet.targeting.languages.length === 0;
             return (
-              <MappingSection key={idx} title={adSet.name} level="ad-set" status={needsInput ? "needs-input" : "complete"}>
-                <div className="space-y-1">
-                  <MappingField label="Name" sourceValue={adSet.name} mappedValue={adSet.name} onMappedValueChange={(v) => updateAdSetField(idx, "name", v)} status="mapped" />
-                  <MappingField label="Strategy" sourceValue={adSet.bidding.strategy} mappedValue={adSet.bidding.strategy} onMappedValueChange={(v) => updateAdSetField(idx, "strategy", v)} status="mapped" fieldType="select" options={BIDDING_STRATEGY_OPTIONS} />
-                  <MappingField label="Devices" sourceValue="(all)" mappedValue={adSet.targeting.devices.join(",")} onMappedValueChange={(v) => updateAdSetField(idx, "devices", v)} status="mapped" fieldType="multi-select" options={DEVICE_OPTIONS} />
-                  <MappingField label="Topic Clusters" sourceValue="(not in GAds)" mappedValue={adSet.targeting.topic_clusters.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "topic_clusters", v)} status={adSet.targeting.topic_clusters.length === 0 ? "action-needed" : "mapped"} />
-                  <MappingField label="Intent Signals" sourceValue="(not in GAds)" mappedValue={adSet.targeting.intent_signals.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "intent_signals", v)} status={adSet.targeting.intent_signals.length === 0 ? "action-needed" : "mapped"} />
-                  <MappingField label="Locations" sourceValue="(not in GAds)" mappedValue={adSet.targeting.locations.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "locations", v)} status={adSet.targeting.locations.length === 0 ? "action-needed" : "mapped"} />
-                  <MappingField label="Languages" sourceValue="(not in GAds)" mappedValue={adSet.targeting.languages.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "languages", v)} status={adSet.targeting.languages.length === 0 ? "action-needed" : "mapped"} />
-                </div>
+              <div key={idx} className="space-y-3">
+                <MappingSection title={adSet.name} level="ad-set" status={needsInput ? "needs-input" : "complete"}>
+                  <div className="space-y-1">
+                    <MappingField label="Name" sourceValue={adSet.name} mappedValue={adSet.name} onMappedValueChange={(v) => updateAdSetField(idx, "name", v)} status="mapped" />
+                    <MappingField label="Strategy" sourceValue={adSet.bidding.strategy} mappedValue={adSet.bidding.strategy} onMappedValueChange={(v) => updateAdSetField(idx, "strategy", v)} status="mapped" fieldType="select" options={BIDDING_STRATEGY_OPTIONS} />
+                    <MappingField label="Devices" sourceValue="(all)" mappedValue={adSet.targeting.devices.join(",")} onMappedValueChange={(v) => updateAdSetField(idx, "devices", v)} status="mapped" fieldType="multi-select" options={DEVICE_OPTIONS} />
+                    <MappingField label="Topic Clusters" sourceValue="(not in GAds)" mappedValue={adSet.targeting.topic_clusters.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "topic_clusters", v)} status={adSet.targeting.topic_clusters.length === 0 ? "action-needed" : "mapped"} />
+                    <MappingField label="Intent Signals" sourceValue="(not in GAds)" mappedValue={adSet.targeting.intent_signals.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "intent_signals", v)} status={adSet.targeting.intent_signals.length === 0 ? "action-needed" : "mapped"} />
+                    <MappingField label="Locations" sourceValue="(not in GAds)" mappedValue={adSet.targeting.locations.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "locations", v)} status={adSet.targeting.locations.length === 0 ? "action-needed" : "mapped"} />
+                    <MappingField label="Languages" sourceValue="(not in GAds)" mappedValue={adSet.targeting.languages.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "languages", v)} status={adSet.targeting.languages.length === 0 ? "action-needed" : "mapped"} />
+                  </div>
+                </MappingSection>
                 {adSet.creatives.map((creative, cIdx) => {
                   const cNeedsInput = !creative.headline || !creative.description;
                   return (
@@ -268,7 +270,7 @@ export function CloneSplitPane({
                     </MappingSection>
                   );
                 })}
-              </MappingSection>
+              </div>
             );
           })}
         </div>
