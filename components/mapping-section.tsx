@@ -26,19 +26,28 @@ interface MappingSectionProps {
   level: Level;
   status: "complete" | "needs-input";
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
 }
 
-export function MappingSection({ title, level, status, defaultOpen, children }: MappingSectionProps) {
-  const [open, setOpen] = useState(defaultOpen ?? status === "needs-input");
+export function MappingSection({ title, level, status, defaultOpen, open: controlledOpen, onOpenChange, children }: MappingSectionProps) {
+  const [internalOpen, setInternalOpen] = useState(defaultOpen ?? status === "needs-input");
+  const isOpen = controlledOpen ?? internalOpen;
   const levelConfig = LEVEL_CONFIG[level];
+
+  function toggle() {
+    const next = !isOpen;
+    onOpenChange?.(next);
+    if (controlledOpen === undefined) setInternalOpen(next);
+  }
 
   return (
     <Card>
-      <CardHeader className="cursor-pointer py-3 px-4" onClick={() => setOpen(!open)}>
+      <CardHeader className="cursor-pointer py-3 px-4" onClick={toggle}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
             <Badge
               variant="outline"
               className={`${levelConfig.className} text-[10px] font-semibold tracking-[0.5px] uppercase rounded-full px-2 py-0`}
@@ -59,7 +68,7 @@ export function MappingSection({ title, level, status, defaultOpen, children }: 
           </Badge>
         </div>
       </CardHeader>
-      {open && <CardContent>{children}</CardContent>}
+      {isOpen && <CardContent>{children}</CardContent>}
     </Card>
   );
 }

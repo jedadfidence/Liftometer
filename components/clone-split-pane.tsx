@@ -69,6 +69,39 @@ export function CloneSplitPane({
   const containerRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
 
+  // Left pane section states: campaign + each ad group
+  const leftSectionCount = 1 + adGroups.length;
+  const [leftOpenStates, setLeftOpenStates] = useState<boolean[]>(() => Array(leftSectionCount).fill(true));
+
+  function setLeftOpen(idx: number, open: boolean) {
+    setLeftOpenStates(prev => { const next = [...prev]; next[idx] = open; return next; });
+  }
+  function collapseAllLeft() { setLeftOpenStates(Array(leftSectionCount).fill(false)); }
+
+  // Right pane section states: campaign + each ad set + each creative
+  const rightSectionCount = 1 + draft.ad_sets.reduce((sum, as) => sum + 1 + as.creatives.length, 0);
+  const [rightOpenStates, setRightOpenStates] = useState<boolean[]>(() => {
+    const states: boolean[] = [false]; // campaign starts closed
+    draft.ad_sets.forEach(adSet => {
+      const needsInput = adSet.targeting.topic_clusters.length === 0 ||
+        adSet.targeting.intent_signals.length === 0 ||
+        adSet.targeting.locations.length === 0 ||
+        adSet.targeting.languages.length === 0;
+      states.push(needsInput); // ad set open if needs input
+      adSet.creatives.forEach(c => {
+        states.push(!c.headline || !c.description); // creative open if needs input
+      });
+    });
+    return states;
+  });
+
+  function setRightOpen(idx: number, open: boolean) {
+    setRightOpenStates(prev => { const next = [...prev]; next[idx] = open; return next; });
+  }
+  function collapseAllRight() { setRightOpenStates(Array(rightSectionCount).fill(false)); }
+  function expandAllRight() { setRightOpenStates(Array(rightSectionCount).fill(true)); }
+  const allRightCollapsed = rightOpenStates.every(s => !s);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (collapsed) return;
     e.preventDefault();
@@ -168,20 +201,29 @@ export function CloneSplitPane({
               <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-semibold">Google Ads Source</span>
             </div>
-            <button
-              type="button"
-              onClick={handleCollapse}
-              className="flex items-center gap-1 rounded-md bg-muted/50 border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
-            >
-              <ChevronLeft className="h-3 w-3" />
-              Hide
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={collapseAllLeft}
+                className="flex items-center gap-1 rounded-md bg-muted/50 border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Collapse All
+              </button>
+              <button
+                type="button"
+                onClick={handleCollapse}
+                className="flex items-center gap-1 rounded-md bg-muted/50 border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
+              >
+                <ChevronLeft className="h-3 w-3" />
+                Hide
+              </button>
+            </div>
           </div>
 
           {/* Left pane content */}
           <ScrollArea className="flex-1">
             <div className="space-y-2 p-3">
-              <SourceSection title="Campaign">
+              <SourceSection title="Campaign" open={leftOpenStates[0]} onOpenChange={(v) => setLeftOpen(0, v)}>
                 <SourceField label="Name" value={campaign.name} />
                 <SourceField label="Status" value={campaign.status} />
                 <SourceField label="Type" value={campaign.advertisingChannelType} />
@@ -191,8 +233,8 @@ export function CloneSplitPane({
                 <SourceField label="End Date" value={campaign.endDate ?? "Not set"} />
               </SourceSection>
 
-              {adGroups.map((ag) => (
-                <SourceSection key={ag.id} title={`Ad Group: ${ag.name}`}>
+              {adGroups.map((ag, agIdx) => (
+                <SourceSection key={ag.id} title={`Ad Group: ${ag.name}`} open={leftOpenStates[agIdx + 1]} onOpenChange={(v) => setLeftOpen(agIdx + 1, v)}>
                   <SourceField label="Type" value={ag.type} />
                   <SourceField label="Status" value={ag.status} />
                   {ag.targetCpaMicros && (
@@ -233,12 +275,17 @@ export function CloneSplitPane({
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
             <span className="text-sm font-semibold">OpenAI Ad Settings</span>
           </div>
-          {/* Spacer to match left header height (which has the Hide button) */}
-          <div className="h-7" />
+          <button
+            type="button"
+            onClick={allRightCollapsed ? expandAllRight : collapseAllRight}
+            className="flex items-center gap-1 rounded-md bg-muted/50 border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
+          >
+            {allRightCollapsed ? "Expand All" : "Collapse All"}
+          </button>
         </div>
         <ScrollArea className="flex-1">
         <div className="space-y-3 p-3">
-          <MappingSection title={draft.name || "General Settings"} level="campaign" status="complete" defaultOpen={false}>
+          <MappingSection title={draft.name || "General Settings"} level="campaign" status="complete" open={rightOpenStates[0]} onOpenChange={(v) => setRightOpen(0, v)}>
             <div className="space-y-1">
               <MappingField label="Name" sourceValue={campaign.name} mappedValue={draft.name} onMappedValueChange={(v) => updateField("name", v)} status="mapped" />
               <MappingField label="Objective" sourceValue={draft.objective} mappedValue={draft.objective} onMappedValueChange={(v) => updateField("objective", v)} status="mapped" fieldType="select" options={OBJECTIVE_OPTIONS} />
@@ -248,42 +295,48 @@ export function CloneSplitPane({
             </div>
           </MappingSection>
 
-          {draft.ad_sets.map((adSet, idx) => {
-            const needsInput = adSet.targeting.topic_clusters.length === 0 ||
-              adSet.targeting.intent_signals.length === 0 ||
-              adSet.targeting.locations.length === 0 ||
-              adSet.targeting.languages.length === 0;
-            return (
-              <div key={idx} className="space-y-3">
-                <MappingSection title={adSet.name} level="ad-set" status={needsInput ? "needs-input" : "complete"}>
-                  <div className="space-y-1">
-                    <MappingField label="Name" sourceValue={adSet.name} mappedValue={adSet.name} onMappedValueChange={(v) => updateAdSetField(idx, "name", v)} status="mapped" />
-                    <MappingField label="Strategy" sourceValue={adSet.bidding.strategy} mappedValue={adSet.bidding.strategy} onMappedValueChange={(v) => updateAdSetField(idx, "strategy", v)} status="mapped" fieldType="select" options={BIDDING_STRATEGY_OPTIONS} />
-                    <MappingField label="Devices" sourceValue="(all)" mappedValue={adSet.targeting.devices.join(",")} onMappedValueChange={(v) => updateAdSetField(idx, "devices", v)} status="mapped" fieldType="multi-select" options={DEVICE_OPTIONS} />
-                    <MappingField label="Topic Clusters" sourceValue="(not in GAds)" mappedValue={adSet.targeting.topic_clusters.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "topic_clusters", v)} status={adSet.targeting.topic_clusters.length === 0 ? "action-needed" : "mapped"} />
-                    <MappingField label="Intent Signals" sourceValue="(not in GAds)" mappedValue={adSet.targeting.intent_signals.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "intent_signals", v)} status={adSet.targeting.intent_signals.length === 0 ? "action-needed" : "mapped"} />
-                    <MappingField label="Locations" sourceValue="(not in GAds)" mappedValue={adSet.targeting.locations.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "locations", v)} status={adSet.targeting.locations.length === 0 ? "action-needed" : "mapped"} />
-                    <MappingField label="Languages" sourceValue="(not in GAds)" mappedValue={adSet.targeting.languages.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "languages", v)} status={adSet.targeting.languages.length === 0 ? "action-needed" : "mapped"} />
+          {(() => {
+            let rIdx = 1; // start after campaign (index 0)
+            return draft.ad_sets.map((adSet, idx) => {
+              const adSetIdx = rIdx++;
+              const needsInput = adSet.targeting.topic_clusters.length === 0 ||
+                adSet.targeting.intent_signals.length === 0 ||
+                adSet.targeting.locations.length === 0 ||
+                adSet.targeting.languages.length === 0;
+              const creativeElements = adSet.creatives.map((creative, cIdx) => {
+                const creativeIdx = rIdx++;
+                const cNeedsInput = !creative.headline || !creative.description;
+                return (
+                  <MappingSection key={cIdx} title={creative.headline || "(no headline)"} level="creative" status={cNeedsInput ? "needs-input" : "complete"} open={rightOpenStates[creativeIdx]} onOpenChange={(v) => setRightOpen(creativeIdx, v)}>
+                    <div className="space-y-1">
+                      <MappingField label="Headline" sourceValue={creative.headline || "(empty)"} mappedValue={creative.headline} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "headline", v)} status={creative.headline ? "mapped" : "action-needed"} maxLength={60} />
+                      <MappingField label="Description" sourceValue={creative.description || "(empty)"} mappedValue={creative.description} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "description", v)} status={creative.description ? "mapped" : "action-needed"} maxLength={180} />
+                      <MappingField label="URL" sourceValue={creative.destination_url} mappedValue={creative.destination_url} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "destination_url", v)} status={creative.destination_url ? "mapped" : "action-needed"} />
+                      <MappingField label="Format" sourceValue={creative.format} mappedValue={creative.format} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "format", v)} status="mapped" fieldType="select" options={CREATIVE_FORMAT_OPTIONS} />
+                    </div>
+                  </MappingSection>
+                );
+              });
+              return (
+                <div key={idx} className="space-y-3">
+                  <MappingSection title={adSet.name} level="ad-set" status={needsInput ? "needs-input" : "complete"} open={rightOpenStates[adSetIdx]} onOpenChange={(v) => setRightOpen(adSetIdx, v)}>
+                    <div className="space-y-1">
+                      <MappingField label="Name" sourceValue={adSet.name} mappedValue={adSet.name} onMappedValueChange={(v) => updateAdSetField(idx, "name", v)} status="mapped" />
+                      <MappingField label="Strategy" sourceValue={adSet.bidding.strategy} mappedValue={adSet.bidding.strategy} onMappedValueChange={(v) => updateAdSetField(idx, "strategy", v)} status="mapped" fieldType="select" options={BIDDING_STRATEGY_OPTIONS} />
+                      <MappingField label="Devices" sourceValue="(all)" mappedValue={adSet.targeting.devices.join(",")} onMappedValueChange={(v) => updateAdSetField(idx, "devices", v)} status="mapped" fieldType="multi-select" options={DEVICE_OPTIONS} />
+                      <MappingField label="Topic Clusters" sourceValue="(not in GAds)" mappedValue={adSet.targeting.topic_clusters.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "topic_clusters", v)} status={adSet.targeting.topic_clusters.length === 0 ? "action-needed" : "mapped"} />
+                      <MappingField label="Intent Signals" sourceValue="(not in GAds)" mappedValue={adSet.targeting.intent_signals.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "intent_signals", v)} status={adSet.targeting.intent_signals.length === 0 ? "action-needed" : "mapped"} />
+                      <MappingField label="Locations" sourceValue="(not in GAds)" mappedValue={adSet.targeting.locations.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "locations", v)} status={adSet.targeting.locations.length === 0 ? "action-needed" : "mapped"} />
+                      <MappingField label="Languages" sourceValue="(not in GAds)" mappedValue={adSet.targeting.languages.join(", ")} onMappedValueChange={(v) => updateAdSetField(idx, "languages", v)} status={adSet.targeting.languages.length === 0 ? "action-needed" : "mapped"} />
+                    </div>
+                  </MappingSection>
+                  <div className="pl-6 space-y-3">
+                    {creativeElements}
                   </div>
-                </MappingSection>
-                <div className="pl-6 space-y-3">
-                  {adSet.creatives.map((creative, cIdx) => {
-                    const cNeedsInput = !creative.headline || !creative.description;
-                    return (
-                      <MappingSection key={cIdx} title={creative.headline || "(no headline)"} level="creative" status={cNeedsInput ? "needs-input" : "complete"}>
-                        <div className="space-y-1">
-                          <MappingField label="Headline" sourceValue={creative.headline || "(empty)"} mappedValue={creative.headline} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "headline", v)} status={creative.headline ? "mapped" : "action-needed"} maxLength={60} />
-                          <MappingField label="Description" sourceValue={creative.description || "(empty)"} mappedValue={creative.description} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "description", v)} status={creative.description ? "mapped" : "action-needed"} maxLength={180} />
-                          <MappingField label="URL" sourceValue={creative.destination_url} mappedValue={creative.destination_url} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "destination_url", v)} status={creative.destination_url ? "mapped" : "action-needed"} />
-                          <MappingField label="Format" sourceValue={creative.format} mappedValue={creative.format} onMappedValueChange={(v) => updateCreativeField(idx, cIdx, "format", v)} status="mapped" fieldType="select" options={CREATIVE_FORMAT_OPTIONS} />
-                        </div>
-                      </MappingSection>
-                    );
-                  })}
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
         </ScrollArea>
       </div>
