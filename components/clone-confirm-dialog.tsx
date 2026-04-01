@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { LevelToggle } from "@/components/level-toggle";
 import { mapFullCampaign, countMappingResults } from "@/lib/oai/mapper";
 import type { GadsCampaign, GadsAdGroup, GadsAd } from "@/lib/types/gads";
+import { CloneSummaryDialog } from "@/components/clone-summary-dialog";
+import type { OAICampaignDraft } from "@/lib/types/oai";
 
 interface CloneConfirmDialogProps {
   campaign: GadsCampaign;
@@ -32,6 +34,12 @@ export function CloneConfirmDialog({
   const [includeAdGroups, setIncludeAdGroups] = useState(true);
   const [includeCreatives, setIncludeCreatives] = useState(true);
   const [cloning, setCloning] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryData, setSummaryData] = useState<{
+    adGroups: GadsAdGroup[];
+    adsByAdGroup: Record<string, GadsAd[]>;
+    draft: OAICampaignDraft;
+  } | null>(null);
 
   const handleClone = useCallback(async () => {
     setCloning(true);
@@ -72,16 +80,11 @@ export function CloneConfirmDialog({
         return;
       }
 
-      const res = await fetch("/api/oai/clone", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
-      });
-      if (!res.ok) throw new Error("Failed to create draft");
-
-      const result = await res.json();
-      toast.success(`Campaign "${result.campaign_name}" cloned successfully`);
+      // All fields mapped — show summary for verification
+      setSummaryData({ adGroups, adsByAdGroup, draft });
+      setShowSummary(true);
       onOpenChange(false);
+      return;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Clone failed";
       toast.error(message);
@@ -90,7 +93,27 @@ export function CloneConfirmDialog({
     }
   }, [campaign.id, includeAdGroups, includeCreatives, onOpenChange, onFallback]);
 
+  const handleConfirmDraft = useCallback(async () => {
+    if (!summaryData) return;
+    try {
+      const res = await fetch("/api/oai/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...summaryData.draft, source_campaign_id: campaign.id }),
+      });
+      if (!res.ok) throw new Error("Failed to create draft");
+      const result = await res.json();
+      toast.success(`Campaign "${result.campaign_name}" cloned successfully`);
+      setShowSummary(false);
+      setSummaryData(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Clone failed";
+      toast.error(message);
+    }
+  }, [summaryData, campaign.id]);
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
@@ -142,5 +165,26 @@ export function CloneConfirmDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {summaryData && (
+      <CloneSummaryDialog
+        open={showSummary}
+        onOpenChange={(open) => {
+          setShowSummary(open);
+          if (!open) setSummaryData(null);
+        }}
+        campaign={campaign}
+        adGroups={summaryData.adGroups}
+        adsByAdGroup={summaryData.adsByAdGroup}
+        draft={summaryData.draft}
+        onConfirm={handleConfirmDraft}
+        onEdit={() => {
+          setShowSummary(false);
+          setSummaryData(null);
+          onFallback(campaign.id);
+        }}
+      />
+    )}
+    </>
   );
 }
