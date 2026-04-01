@@ -201,16 +201,18 @@ export function MappingField({
   }
 
   return (
-    <div className="flex items-center gap-4 py-2">
+    <div className="flex items-center gap-4 py-3">
       <div className="w-1/4 text-sm text-muted-foreground">{label}</div>
       <div className="w-1/4 text-sm font-mono truncate" title={sourceValue}>{sourceValue}</div>
       <div className="w-1/4">{renderControl()}</div>
       <div className="w-1/4 flex justify-end">
         <Badge
+          variant="outline"
           className={cn(
+            "text-[10px] rounded-full",
             status === "mapped"
-              ? "bg-[var(--color-mapped)] text-white"
-              : "bg-[var(--color-action-needed)] text-black"
+              ? "bg-[var(--color-status-mapped-bg)] text-[var(--color-mapped)] border-[var(--color-status-mapped-border)]"
+              : "bg-[var(--color-status-action-bg)] text-[var(--color-action-needed)] border-[var(--color-status-action-border)]"
           )}
         >
           {status === "mapped" ? "Mapped" : "Action needed"}
