@@ -224,7 +224,7 @@ export function CloneSplitPane({
           </div>
 
           {/* Left pane content */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 overflow-hidden">
             <div className="space-y-2 p-3">
               <SourceSection title={campaign.name} level="campaign" open={leftOpenStates[0]} onOpenChange={(v) => setLeftOpen(0, v)}>
                 <SourceField label="Name" value={campaign.name} />
@@ -300,7 +300,7 @@ export function CloneSplitPane({
             </button>
           </div>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-hidden">
         <div className="space-y-3 p-3">
           {!showOnlyNeedsInput && (
             <MappingSection title={draft.name || "General Settings"} level="campaign" status="complete" open={rightOpenStates[0]} onOpenChange={(v) => setRightOpen(0, v)}>

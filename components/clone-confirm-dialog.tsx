@@ -83,7 +83,6 @@ export function CloneConfirmDialog({
       // All fields mapped — show summary for verification
       setSummaryData({ adGroups, adsByAdGroup, draft });
       setShowSummary(true);
-      onOpenChange(false);
       return;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Clone failed";
@@ -106,15 +105,16 @@ export function CloneConfirmDialog({
       toast.success(`Campaign "${result.campaign_name}" cloned successfully`);
       setShowSummary(false);
       setSummaryData(null);
+      onOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Clone failed";
       toast.error(message);
     }
-  }, [summaryData, campaign.id]);
+  }, [summaryData, campaign.id, onOpenChange]);
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && !showSummary} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Clone to OpenAI Ads</DialogTitle>
@@ -173,9 +173,12 @@ export function CloneConfirmDialog({
     {summaryData && (
       <CloneSummaryDialog
         open={showSummary}
-        onOpenChange={(open) => {
-          setShowSummary(open);
-          if (!open) setSummaryData(null);
+        onOpenChange={(v) => {
+          setShowSummary(v);
+          if (!v) {
+            setSummaryData(null);
+            onOpenChange(false);
+          }
         }}
         campaign={campaign}
         adGroups={summaryData.adGroups}

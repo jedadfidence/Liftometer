@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
-type SourceLevel = "campaign" | "ad-group";
+type SourceLevel = "campaign" | "ad-group" | "ad-set" | "creative";
 
 const SOURCE_LEVEL_CONFIG: Record<SourceLevel, { label: string; className: string }> = {
   campaign: {
@@ -14,6 +14,14 @@ const SOURCE_LEVEL_CONFIG: Record<SourceLevel, { label: string; className: strin
   "ad-group": {
     label: "AD GROUP",
     className: "bg-[var(--color-level-ad-set-bg)] text-[var(--color-level-ad-set)] border-[var(--color-level-ad-set-border)]",
+  },
+  "ad-set": {
+    label: "AD SET",
+    className: "bg-[var(--color-level-ad-set-bg)] text-[var(--color-level-ad-set)] border-[var(--color-level-ad-set-border)]",
+  },
+  creative: {
+    label: "CREATIVE",
+    className: "bg-[var(--color-level-creative-bg)] text-[var(--color-level-creative)] border-[var(--color-level-creative-border)]",
   },
 };
 
@@ -37,6 +45,25 @@ export function SourceSection({ title, level, defaultOpen = true, open: controll
     if (controlledOpen === undefined) setInternalOpen(next);
   }
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(isOpen ? undefined : 0);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    if (isOpen) {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      const timer = setTimeout(() => setHeight(undefined), 200);
+      return () => clearTimeout(timer);
+    } else {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setHeight(0));
+      });
+    }
+  }, [isOpen]);
+
   return (
     <div>
       <button
@@ -44,7 +71,7 @@ export function SourceSection({ title, level, defaultOpen = true, open: controll
         onClick={toggle}
         className="flex w-full items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
       >
-        {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
         {levelConfig && (
           <Badge
             variant="outline"
@@ -55,7 +82,13 @@ export function SourceSection({ title, level, defaultOpen = true, open: controll
         )}
         {title}
       </button>
-      {isOpen && <div className="px-3 py-2">{children}</div>}
+      <div
+        ref={contentRef}
+        className="overflow-hidden transition-[height] duration-200 ease-in-out"
+        style={{ height: height === undefined ? "auto" : height }}
+      >
+        <div className="px-3 py-2">{children}</div>
+      </div>
     </div>
   );
 }
