@@ -111,8 +111,8 @@ export default function CloneFallbackPage() {
   const { mapped, actionNeeded } = countMappingResults(draft);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
-      <div className="flex items-center justify-between px-1 py-2 shrink-0">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between py-2 shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-semibold">Clone: {campaign.name}</h1>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
