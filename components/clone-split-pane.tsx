@@ -78,6 +78,8 @@ export function CloneSplitPane({
     setLeftOpenStates(prev => { const next = [...prev]; next[idx] = open; return next; });
   }
   function collapseAllLeft() { setLeftOpenStates(Array(leftSectionCount).fill(false)); }
+  function expandAllLeft() { setLeftOpenStates(Array(leftSectionCount).fill(true)); }
+  const allLeftCollapsed = leftOpenStates.every(s => !s);
 
   // Right pane section states: campaign + each ad set + each creative
   const rightSectionCount = 1 + draft.ad_sets.reduce((sum, as) => sum + 1 + as.creatives.length, 0);
@@ -205,10 +207,10 @@ export function CloneSplitPane({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={collapseAllLeft}
+                onClick={allLeftCollapsed ? expandAllLeft : collapseAllLeft}
                 className="flex items-center gap-1 rounded-md bg-muted/50 border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
               >
-                Collapse All
+                {allLeftCollapsed ? "Expand All" : "Collapse All"}
               </button>
               <button
                 type="button"
