@@ -236,6 +236,7 @@ export function CloneSplitPane({
                 <SourceField label="End Date" value={campaign.endDate ?? "Not set"} />
               </SourceSection>
 
+              <div className="pl-4 space-y-2">
               {adGroups.map((ag, agIdx) => (
                 <SourceSection key={ag.id} title={ag.name} level="ad-group" open={leftOpenStates[agIdx + 1]} onOpenChange={(v) => setLeftOpen(agIdx + 1, v)}>
                   <SourceField label="Type" value={ag.type} />
@@ -252,6 +253,7 @@ export function CloneSplitPane({
                   ))}
                 </SourceSection>
               ))}
+              </div>
             </div>
           </ScrollArea>
         </div>
@@ -314,6 +316,7 @@ export function CloneSplitPane({
             </MappingSection>
           )}
 
+          <div className="pl-4 min-w-0 space-y-3">
           {(() => {
             let rIdx = 1; // start after campaign (index 0)
             return draft.ad_sets.map((adSet, idx) => {
@@ -366,7 +369,7 @@ export function CloneSplitPane({
                     </div>
                   </MappingSection>
                   {creativeElements.length > 0 && (
-                    <div className="pl-6 space-y-3">
+                    <div className="pl-4 min-w-0 space-y-3">
                       {creativeElements}
                     </div>
                   )}
@@ -374,6 +377,7 @@ export function CloneSplitPane({
               );
             }).filter(Boolean);
           })()}
+          </div>
         </div>
         </ScrollArea>
       </div>

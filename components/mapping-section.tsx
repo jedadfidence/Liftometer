@@ -1,8 +1,7 @@
 "use client";
-import { useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 type Level = "campaign" | "ad-set" | "creative";
 
@@ -42,33 +41,60 @@ export function MappingSection({ title, level, status, defaultOpen, open: contro
     if (controlledOpen === undefined) setInternalOpen(next);
   }
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(isOpen ? undefined : 0);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    if (isOpen) {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      const timer = setTimeout(() => setHeight(undefined), 200);
+      return () => clearTimeout(timer);
+    } else {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setHeight(0));
+      });
+    }
+  }, [isOpen]);
+
   return (
-    <Card>
-      <CardHeader className="cursor-pointer py-3 px-4" onClick={toggle}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-            <Badge
-              variant="outline"
-              className={`${levelConfig.className} text-[10px] font-semibold tracking-[0.5px] uppercase rounded-full px-2 py-0`}
-            >
-              {levelConfig.label}
-            </Badge>
-            <span className="text-sm font-medium">{title}</span>
-          </div>
+    <div className="min-w-0 overflow-hidden rounded-xl bg-card text-sm text-card-foreground ring-1 ring-foreground/10">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center justify-between cursor-pointer py-3 px-4"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
           <Badge
             variant="outline"
-            className={
-              status === "complete"
-                ? "bg-[var(--color-status-mapped-bg)] text-[var(--color-mapped)] border-[var(--color-status-mapped-border)] text-[10px] rounded-full"
-                : "bg-[var(--color-status-action-bg)] text-[var(--color-action-needed)] border-[var(--color-status-action-border)] text-[10px] rounded-full"
-            }
+            className={`${levelConfig.className} text-[10px] font-semibold tracking-[0.5px] uppercase rounded-full px-2 py-0 shrink-0`}
           >
-            {status === "complete" ? "Fully mapped" : "Needs input"}
+            {levelConfig.label}
           </Badge>
+          <span className="text-sm font-medium truncate">{title}</span>
         </div>
-      </CardHeader>
-      {isOpen && <CardContent>{children}</CardContent>}
-    </Card>
+        <Badge
+          variant="outline"
+          className={`shrink-0 ml-2 ${
+            status === "complete"
+              ? "bg-[var(--color-status-mapped-bg)] text-[var(--color-mapped)] border-[var(--color-status-mapped-border)] text-[10px] rounded-full"
+              : "bg-[var(--color-status-action-bg)] text-[var(--color-action-needed)] border-[var(--color-status-action-border)] text-[10px] rounded-full"
+          }`}
+        >
+          {status === "complete" ? "Fully mapped" : "Needs input"}
+        </Badge>
+      </button>
+      <div
+        ref={contentRef}
+        className="overflow-hidden transition-[height] duration-200 ease-in-out"
+        style={{ height: height === undefined ? "auto" : height }}
+      >
+        <div className="px-4 pb-3">{children}</div>
+      </div>
+    </div>
   );
 }
