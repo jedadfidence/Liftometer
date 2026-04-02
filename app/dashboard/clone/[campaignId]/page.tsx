@@ -10,6 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CloneSplitPane } from "@/components/clone-split-pane";
 import { mapFullCampaign, countMappingResults } from "@/lib/oai/mapper";
 import type { GadsCampaign, GadsAdGroup, GadsAd, OAICampaignDraft } from "@/lib/types";
+import type { GmcProduct } from "@/lib/types/gmc";
+import { ProductToggleList } from "@/components/product-toggle-list";
+import { mapProduct } from "@/lib/oai-mc/mapper";
 
 export default function CloneFallbackPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -22,6 +25,8 @@ export default function CloneFallbackPage() {
   const [adGroups, setAdGroups] = useState<GadsAdGroup[]>([]);
   const [adsByAdGroup, setAdsByAdGroup] = useState<Record<string, GadsAd[]>>({});
   const [draft, setDraft] = useState<OAICampaignDraft | null>(null);
+  const [linkedProducts, setLinkedProducts] = useState<GmcProduct[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -47,6 +52,19 @@ export default function CloneFallbackPage() {
 
         const mapped = mapFullCampaign(fetchedCampaign, fetchedAgs, fetchedAds);
         setDraft(mapped);
+
+        // Fetch linked products
+        try {
+          const productsRes = await fetch(`/api/gads/campaigns/${campaignId}/products`);
+          if (productsRes.ok) {
+            const productsData = await productsRes.json();
+            const prods: GmcProduct[] = productsData.products ?? [];
+            setLinkedProducts(prods);
+            setSelectedProductIds(prods.map((p) => p.offerId));
+          }
+        } catch {
+          // Products are optional — don't fail the clone flow
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load");
         toast.error("Failed to load campaign data");
@@ -68,6 +86,19 @@ export default function CloneFallbackPage() {
       });
       if (!res.ok) throw new Error("Failed to create draft");
       const result = await res.json();
+
+      // Copy selected products to OAI MC
+      if (selectedProductIds.length > 0) {
+        for (const product of linkedProducts.filter((p) => selectedProductIds.includes(p.offerId))) {
+          const productDraft = mapProduct(product);
+          await fetch("/api/oai-mc/copy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...productDraft, source_product_id: product.offerId, with_campaign: true }),
+          });
+        }
+      }
+
       toast.success(`Campaign "${result.campaign_name}" cloned successfully`);
       setTimeout(() => {
         window.location.href = "/dashboard";
@@ -139,6 +170,16 @@ export default function CloneFallbackPage() {
           )}
         </Button>
       </div>
+
+      {linkedProducts.length > 0 && (
+        <div className="shrink-0 py-2">
+          <ProductToggleList
+            products={linkedProducts}
+            selectedIds={selectedProductIds}
+            onSelectionChange={setSelectedProductIds}
+          />
+        </div>
+      )}
 
       <CloneSplitPane
         campaign={campaign}

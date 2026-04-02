@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Megaphone, Settings } from "lucide-react";
+import { LayoutDashboard, Megaphone, Package, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/campaigns", icon: Megaphone, label: "Campaigns" },
+  { href: "/dashboard/products", icon: Package, label: "Products" },
 ];
 
 const BOTTOM_ITEMS = [
