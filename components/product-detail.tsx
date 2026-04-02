@@ -410,7 +410,7 @@ export function ProductDetail({ product }: { product: GmcProduct }) {
                   <span className="text-sm font-medium truncate">{c.name}</span>
                 </div>
                 <a
-                  href={`/dashboard/campaigns?id=${c.id}`}
+                  href={`/dashboard/campaigns`}
                   className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 ml-2"
                 >
                   View <ArrowRight className="h-3 w-3" />
