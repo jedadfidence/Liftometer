@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
+import { ProductDetail } from "@/components/product-detail";
 import { ProductFilterBar, ProductFilterChips, type ProductFilters } from "@/components/product-filter-bar";
 import { formatBudget, microsToUsd } from "@/lib/utils";
 import type { GmcProduct, GmcAvailability, ProductCampaignLink } from "@/lib/types/gmc";
@@ -282,9 +283,7 @@ export function ProductTable({ products, productCampaignLinks }: ProductTablePro
                 </Button>
               )}
             </div>
-            {detailProduct && (
-              <p className="text-sm text-muted-foreground">Product detail coming soon.</p>
-            )}
+            {detailProduct && <ProductDetail product={detailProduct} />}
           </div>
         </SheetContent>
       </Sheet>
