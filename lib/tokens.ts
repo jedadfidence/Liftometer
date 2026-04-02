@@ -233,6 +233,13 @@ if (process.env.USE_MOCK_DATA === "true" || process.env.SKIP_AUTH === "true") {
     };
   }
 
+  // Seed product-campaign links
+  if (tokens.productCampaignLinks.length === 0) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { MOCK_PRODUCT_CAMPAIGN_LINKS } = require("@/lib/gmc/mock-data");
+    tokens.productCampaignLinks = MOCK_PRODUCT_CAMPAIGN_LINKS;
+  }
+
   // Seed some activity history
   if (tokens.activity.length === 0) {
     const now = Date.now();
