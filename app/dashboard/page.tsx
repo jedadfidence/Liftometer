@@ -10,31 +10,36 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Megaphone, Activity, CheckCircle2, Plus, Copy, Building2,
+  Megaphone, Activity, CheckCircle2, Plus, Copy, Building2, ExternalLink, Package,
 } from "lucide-react";
 import type { GadsCampaign } from "@/lib/types/gads";
 import type { ActivityEntry } from "@/lib/tokens";
+import type { GmcProduct } from "@/lib/types/gmc";
 
 export default function DashboardPage() {
   const [campaigns, setCampaigns] = useState<GadsCampaign[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [accounts, setAccounts] = useState<{ customerId: string; name: string }[]>([]);
+  const [products, setProducts] = useState<GmcProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [campRes, actRes, accRes] = await Promise.all([
+        const [campRes, actRes, accRes, prodRes] = await Promise.all([
           fetch("/api/gads/campaigns"),
           fetch("/api/activity"),
           fetch("/api/gads/accounts"),
+          fetch("/api/gmc/products"),
         ]);
         const campData = await campRes.json();
         const actData = await actRes.json();
         const accData = await accRes.json();
+        const prodData = await prodRes.json();
         setCampaigns(campData.campaigns ?? []);
         setActivity(actData.activity ?? []);
         setAccounts(accData.accounts ?? []);
+        setProducts(prodData.products ?? []);
       } catch {
         // Dashboard degrades gracefully
       } finally {
@@ -48,8 +53,8 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <div className="grid gap-4 grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid gap-4 grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
@@ -66,7 +71,7 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       {/* Stats Row */}
-      <div className="grid gap-4 grid-cols-3">
+      <div className="grid gap-4 grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -96,6 +101,17 @@ export default function DashboardPage() {
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Cloned to OAI</p>
                 <p className="text-2xl font-bold">{clonedCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Package className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Products</p>
+                <p className="text-2xl font-bold">{products.length}</p>
               </div>
             </div>
           </CardContent>
@@ -138,6 +154,7 @@ export default function DashboardPage() {
                   <TableHead>Campaign</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Time</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -147,6 +164,18 @@ export default function DashboardPage() {
                     <TableCell><Badge variant="secondary">{entry.action}</Badge></TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(entry.timestamp).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      {entry.campaignId && (
+                        <a
+                          href={`https://ads.google.com/aw/campaigns?campaignId=${entry.campaignId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { microsToUsd, formatBudget } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Package } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { GadsCampaign } from "@/lib/types/gads";
+import type { GmcProduct } from "@/lib/types/gmc";
 
 /* ------------------------------------------------------------------ */
-/*  Collapsible section                                                */
+/*  Collapsible section with smooth height animation                   */
 /* ------------------------------------------------------------------ */
 
-function CollapsibleSection({
+function Section({
   title,
   children,
   defaultOpen = true,
@@ -22,24 +24,48 @@ function CollapsibleSection({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(defaultOpen ? undefined : 0);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    if (open) {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      const timer = setTimeout(() => setHeight(undefined), 200);
+      return () => clearTimeout(timer);
+    } else {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setHeight(0));
+      });
+    }
+  }, [open]);
 
   return (
-    <Card>
-      <CardHeader
-        className="cursor-pointer select-none"
+    <div className="border-b border-border last:border-b-0">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between py-3 text-sm font-semibold hover:text-foreground transition-colors"
         onClick={() => setOpen((v) => !v)}
       >
-        <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
-          <ChevronDown
-            className={`h-4 w-4 text-muted-foreground transition-transform ${
-              open ? "rotate-0" : "-rotate-90"
-            }`}
-          />
-        </div>
-      </CardHeader>
-      {open && <CardContent>{children}</CardContent>}
-    </Card>
+        {title}
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform duration-200",
+            !open && "-rotate-90"
+          )}
+        />
+      </button>
+      <div
+        ref={contentRef}
+        className="overflow-hidden transition-[height] duration-200 ease-in-out"
+        style={{ height: height !== undefined ? `${height}px` : "auto" }}
+      >
+        <div className="pb-4 space-y-1">{children}</div>
+      </div>
+    </div>
   );
 }
 
@@ -50,9 +76,9 @@ function CollapsibleSection({
 function Row({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
   if (value === undefined || value === null || value === "") return null;
   return (
-    <div className="flex items-start justify-between gap-4 py-1.5 text-sm">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className={`text-right ${mono ? "font-mono" : ""}`}>{value}</span>
+    <div className="flex items-center justify-between gap-4 py-1 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn("text-right", mono && "font-mono text-xs")}>{value}</span>
     </div>
   );
 }
@@ -63,11 +89,29 @@ function Row({ label, value, mono = false }: { label: string; value: React.React
 
 export function CampaignDetail({ campaign }: { campaign: GadsCampaign }) {
   const c = campaign;
+  const [linkedProducts, setLinkedProducts] = useState<GmcProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadProducts() {
+      setProductsLoading(true);
+      try {
+        const res = await fetch(`/api/gads/campaigns/${campaign.id}/products`);
+        const data = await res.json();
+        setLinkedProducts(data.products ?? []);
+      } catch {
+        // Degrade gracefully
+      } finally {
+        setProductsLoading(false);
+      }
+    }
+    loadProducts();
+  }, [campaign.id]);
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Core Info */}
-      <CollapsibleSection title="Core Info">
+      <Section title="Core Info">
         <Row label="Name" value={c.name} />
         <Row label="ID" value={c.id} mono />
         <Row label="Status" value={<StatusBadge status={c.status} />} />
@@ -75,12 +119,10 @@ export function CampaignDetail({ campaign }: { campaign: GadsCampaign }) {
         {c.advertisingChannelSubType && (
           <Row label="Sub-type" value={c.advertisingChannelSubType} />
         )}
-      </CollapsibleSection>
-
-      <Separator />
+      </Section>
 
       {/* Budget */}
-      <CollapsibleSection title="Budget">
+      <Section title="Budget">
         <Row
           label="Daily Amount"
           value={formatBudget(microsToUsd(c.budget.amountMicros))}
@@ -95,19 +137,15 @@ export function CampaignDetail({ campaign }: { campaign: GadsCampaign }) {
         )}
         <Row label="Delivery Method" value={c.budget.deliveryMethod} />
         <Row label="Period" value={c.budget.period} />
-      </CollapsibleSection>
-
-      <Separator />
+      </Section>
 
       {/* Bidding */}
-      <CollapsibleSection title="Bidding">
+      <Section title="Bidding">
         <Row label="Strategy Type" value={c.biddingStrategyType} />
-      </CollapsibleSection>
-
-      <Separator />
+      </Section>
 
       {/* Network Settings */}
-      <CollapsibleSection title="Network Settings">
+      <Section title="Network Settings">
         <Row
           label="Google Search"
           value={c.networkSettings.targetGoogleSearch ? "Yes" : "No"}
@@ -120,12 +158,10 @@ export function CampaignDetail({ campaign }: { campaign: GadsCampaign }) {
           label="Display Network"
           value={c.networkSettings.targetContentNetwork ? "Yes" : "No"}
         />
-      </CollapsibleSection>
-
-      <Separator />
+      </Section>
 
       {/* Geo Targeting */}
-      <CollapsibleSection title="Geo Targeting">
+      <Section title="Geo Targeting">
         <Row
           label="Positive Geo Target Type"
           value={c.geoTargetTypeSetting.positiveGeoTargetType}
@@ -134,58 +170,100 @@ export function CampaignDetail({ campaign }: { campaign: GadsCampaign }) {
           label="Negative Geo Target Type"
           value={c.geoTargetTypeSetting.negativeGeoTargetType}
         />
-      </CollapsibleSection>
-
-      <Separator />
+      </Section>
 
       {/* Scheduling */}
       {(c.startDate || c.endDate) && (
-        <>
-          <CollapsibleSection title="Scheduling">
-            {c.startDate && <Row label="Start Date" value={c.startDate} mono />}
-            {c.endDate && <Row label="End Date" value={c.endDate} mono />}
-          </CollapsibleSection>
-          <Separator />
-        </>
+        <Section title="Scheduling">
+          {c.startDate && <Row label="Start Date" value={c.startDate} mono />}
+          {c.endDate && <Row label="End Date" value={c.endDate} mono />}
+        </Section>
       )}
 
       {/* Tracking */}
       {(c.trackingUrlTemplate || c.finalUrlSuffix) && (
-        <>
-          <CollapsibleSection title="Tracking">
-            {c.trackingUrlTemplate && (
-              <Row label="URL Template" value={c.trackingUrlTemplate} mono />
-            )}
-            {c.finalUrlSuffix && (
-              <Row label="Final URL Suffix" value={c.finalUrlSuffix} mono />
-            )}
-          </CollapsibleSection>
-          <Separator />
-        </>
+        <Section title="Tracking">
+          {c.trackingUrlTemplate && (
+            <Row label="URL Template" value={c.trackingUrlTemplate} mono />
+          )}
+          {c.finalUrlSuffix && (
+            <Row label="Final URL Suffix" value={c.finalUrlSuffix} mono />
+          )}
+        </Section>
       )}
 
       {/* Ad Rotation */}
       {c.adServingOptimizationStatus && (
-        <>
-          <CollapsibleSection title="Ad Rotation">
-            <Row
-              label="Serving Optimization"
-              value={c.adServingOptimizationStatus}
-            />
-          </CollapsibleSection>
-          <Separator />
-        </>
+        <Section title="Ad Rotation">
+          <Row
+            label="Serving Optimization"
+            value={c.adServingOptimizationStatus}
+          />
+        </Section>
       )}
 
       {/* Additional Settings */}
       {c.urlExpansionOptOut !== undefined && (
-        <CollapsibleSection title="Additional Settings">
+        <Section title="Additional Settings">
           <Row
             label="URL Expansion Opt-out"
             value={c.urlExpansionOptOut ? "Yes" : "No"}
           />
-        </CollapsibleSection>
+        </Section>
       )}
+
+      {/* Linked Products */}
+      <Section title={`Linked Products (${linkedProducts.length})`} defaultOpen={false}>
+        {productsLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-12" />
+            <Skeleton className="h-12" />
+            <Skeleton className="h-12" />
+          </div>
+        ) : linkedProducts.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">No linked products</p>
+        ) : (
+          <div className="space-y-2">
+            {linkedProducts.map((product) => {
+              const attrs = product.productAttributes;
+              const priceUsd = microsToUsd(Number(attrs.price.amountMicros));
+              return (
+                <div
+                  key={product.offerId}
+                  className="flex items-center gap-3 rounded-md border border-border p-2"
+                >
+                  {attrs.imageLink ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={attrs.imageLink}
+                      alt={attrs.title}
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 rounded object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{attrs.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBudget(priceUsd)}{attrs.brand ? ` · ${attrs.brand}` : ""}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/dashboard/products/${product.offerId}`}
+                    className="text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
+                  >
+                    View →
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Section>
     </div>
   );
 }
